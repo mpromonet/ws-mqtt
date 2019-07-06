@@ -16,6 +16,7 @@
 
         let mqttService = null;
         function connect() {
+            content.innerHTML = "";
             const url = document.querySelector('#url');
             if (mqttService) {
                 mqttService.unsubscribe();
@@ -24,7 +25,7 @@
 
             const state = document.querySelector('#state');
             mqttService.on('message', message => {
-                displayMessage("[" + message.destinationName + "] " + message.payloadString);
+                displayMessage("[" + message.destinationName + "] " + message.payloadString + " (qos:" + message.qos + " retained:" + message.retained +")");
             });
             mqttService.on('error', message => {
                 state.innerHTML = "error:" + message;
@@ -32,7 +33,9 @@
             mqttService.on('state', message => {
                 state.innerHTML = message;
             });                
-            mqttService.subscribe('#');        
+            mqttService.subscribe('#');
+            mqttService.subscribe('$SYS/broker/uptime');        
+            mqttService.subscribe('$SYS/broker/clients/#');        
         }
         document.querySelector('#connect').addEventListener('click', connect)
       </script>
