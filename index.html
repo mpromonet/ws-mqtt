@@ -1,10 +1,11 @@
 <html>
 <head>
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
-	<script type="module" src="dist/bundle.js"></script>
+    <script type="module" src="dist/bundle.js"></script>
 </head>
 <body>
-    <input id="url" type="text" value="ws://192.168.0.45:8883/mqtt" size="50"> <span id="state"></span>
+    <input id="url" type="text" value="ws://192.168.0.45:8883/mqtt" size="50">
+    <button id="connect">Connect</button> <span id="state"></span>
     <div id="content"></div>
     <script type="module">
         const content = document.querySelector('#content');
@@ -12,20 +13,28 @@
             content.appendChild(document.createTextNode(message));
             content.appendChild(document.createElement("br"));	        
         }
-        const url = document.querySelector('#url');
-        const mqttService = new MQTTService(url.value);
 
-        const state = document.querySelector('#state');
-        mqttService.on('message', message => {
-            displayMessage("[" + message.destinationName + "] " + message.payloadString);
-        });
-        mqttService.on('error', message => {
-            state.innerHTML = "error:" + message;
-        });
-        mqttService.on('state', message => {
-            state.innerHTML = message;
-        });                
-		mqttService.subscribe('#');        
+        let mqttService = null;
+        function connect() {
+            const url = document.querySelector('#url');
+            if (mqttService) {
+                mqttService.unsubscribe();
+            }
+            mqttService = new MQTTService(url.value);
+
+            const state = document.querySelector('#state');
+            mqttService.on('message', message => {
+                displayMessage("[" + message.destinationName + "] " + message.payloadString);
+            });
+            mqttService.on('error', message => {
+                state.innerHTML = "error:" + message;
+            });
+            mqttService.on('state', message => {
+                state.innerHTML = message;
+            });                
+            mqttService.subscribe('#');        
+        }
+        document.querySelector('#connect').addEventListener('click', connect)
       </script>
 </body>
 </html>

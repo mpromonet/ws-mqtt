@@ -3,10 +3,11 @@ import { EventEmitter } from 'events';
 
 export class MQTTService  extends EventEmitter {
     private mqttClient: Client;
+    private timer: any;
 
     constructor(url: string) {
         super()
-        this.mqttClient = new Client(url, "clientjs");
+        this.mqttClient = new Client(url, "client-" + Math.random());
     }
 
     subscribe(topic: string): void {
@@ -19,15 +20,8 @@ export class MQTTService  extends EventEmitter {
         };
 
         let options =  {
-            onSuccess: () => {this.onConnect(topic)},
-            onFailure: (error: ErrorWithInvocationContext) => {
-                this.emit("error", error.errorCode + " " + error.errorMessage)
-                try {
-                    this.mqttClient.disconnect();
-                } catch {                   
-                }
-                setTimeout( () => this.mqttClient.connect(options), 1000)
-            },
+            onSuccess: () => this.onConnect(topic),
+            onFailure: (error: ErrorWithInvocationContext) => this.onConnectionFailure(error, options),
             keepAliveInterval: 10,
             timeout: 10,
             reconnect: true
@@ -37,11 +31,29 @@ export class MQTTService  extends EventEmitter {
     }
 
     unsubscribe() {
-        this.mqttClient.disconnect();
+        this.close();
+    }
+
+    private onConnectionFailure(error: ErrorWithInvocationContext, options: ConnectionOptions): void {
+        this.emit("error", error.errorCode + " " + error.errorMessage)
+        this.close();
+        this.timer = setTimeout( () => this.mqttClient.connect(options), 1000)
+    }
+
+    private close(): void {
+        try {
+            this.mqttClient.disconnect();
+        } catch {                   
+        }
+        if (this.timer) {
+            clearTimeout(this.timer);
+            this.timer = null;
+        }        
     }
 
     private onConnect(topic: string): void {
-        this.emit("state", "connected")
+        this.emit("state", "connected");
+        
         let options =  {
             onSuccess: (success: OnSubscribeSuccessParams) => {
                 this.emit("state", "subscribed")
@@ -49,7 +61,8 @@ export class MQTTService  extends EventEmitter {
             onFailure: (error: ErrorWithInvocationContext) => {
                 this.emit("error", error.errorCode + " " + error.errorMessage)
             }
-        } as SubscribeOptions;        
+        } as SubscribeOptions;      
+
         this.mqttClient.subscribe(topic, options);
     }   
 }
